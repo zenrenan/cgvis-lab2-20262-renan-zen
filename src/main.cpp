@@ -191,8 +191,8 @@ bool g_MiddleMouseButtonPressed = false; // Análogo para botão do meio do mous
 // efetiva da câmera é calculada dentro da função main(), dentro do loop de
 // renderização.
 float g_CameraTheta = 0.0f; // Ângulo no plano ZX em relação ao eixo Z
-float g_CameraPhi = 0.3f;   // Ângulo em relação ao eixo Y
-float g_CameraDistance = 3.5f; // Distância da câmera para a origem
+float g_CameraPhi = 0.8f;   // Ângulo em relação ao eixo Y
+float g_CameraDistance = 20.0f; // Distância da câmera para a origem
 
 // Variáveis que controlam rotação do antebraço
 float g_ForearmAngleZ = 0.0f;
@@ -215,6 +215,79 @@ GLint g_view_uniform;
 GLint g_projection_uniform;
 GLint g_object_id_uniform;
 GLint g_surface_type_uniform;
+
+struct Pose {
+    glm::vec3 position;
+    float yaw;
+};
+
+// Retorna o offset do pulo (Y) com base no tempo e na fase
+float GetHopHeight(float t, float speed, float height) {
+    return std::abs(std::sin(t * speed)) * height;
+}
+
+// Círculo: coelhos azuis
+Pose GetCirclePose(float u, float radius) {
+    Pose p;
+    float angle = u * 2.0f * 3.141592f;
+    p.position = glm::vec3(std::cos(angle) * radius, 0.0f, std::sin(angle) * radius);
+    p.yaw = -angle + (3.141592f / 2.0f); 
+    return p;
+}
+
+// Retângulo: coelhos verdes (Sentido Horário)
+Pose GetRectanglePose(float u, float width, float depth) {
+    Pose p;
+    float perimeter = 2.0f * (width + depth);
+    float dist = std::fmod(u * perimeter, perimeter);
+
+    if (dist < width) {
+        // Aresta superior (movendo para a direita: +X)
+        p.position = glm::vec3(-width/2.0f + dist, 0.0f, -depth/2.0f);
+        p.yaw = 3.141592f; // Girado 180 graus
+    } else if (dist < width + depth) {
+        // Aresta direita (movendo para baixo na tela: +Z)
+        float d = dist - width;
+        p.position = glm::vec3(width/2.0f, 0.0f, -depth/2.0f + d);
+        p.yaw = 3.141592f / 2.0f; // Girado 180 graus
+    } else if (dist < 2.0f * width + depth) {
+        // Aresta inferior (movendo para a esquerda: -X)
+        float d = dist - (width + depth);
+        p.position = glm::vec3(width/2.0f - d, 0.0f, depth/2.0f);
+        p.yaw = 0.0f; // Girado 180 graus
+    } else {
+        // Aresta esquerda (movendo para cima na tela: -Z)
+        float d = dist - (2.0f * width + depth);
+        p.position = glm::vec3(-width/2.0f, 0.0f, depth/2.0f - d);
+        p.yaw = -3.141592f / 2.0f; // Girado 180 graus
+    }
+    return p;
+}
+
+// Losango: coelhos dourados
+Pose GetDiamondPose(float u, float radius) {
+    Pose p;
+    float dist = std::fmod(u * 4.0f, 4.0f);
+    
+    // Todos os ângulos rotacionados em 180 graus (adicionado PI)
+    if (dist < 1.0f) {
+        p.position = glm::vec3(radius * (1.0f - dist), 0.0f, radius * dist);
+        p.yaw = 3.141592f / 4.0f; 
+    } else if (dist < 2.0f) {
+        float d = dist - 1.0f;
+        p.position = glm::vec3(-radius * d, 0.0f, radius * (1.0f - d));
+        p.yaw = -3.141592f / 4.0f;
+    } else if (dist < 3.0f) {
+        float d = dist - 2.0f;
+        p.position = glm::vec3(-radius * (1.0f - d), 0.0f, -radius * d);
+        p.yaw = -3.141592f * 3.0f / 4.0f;
+    } else {
+        float d = dist - 3.0f;
+        p.position = glm::vec3(radius * d, 0.0f, -radius * (1.0f - d));
+        p.yaw = 3.141592f * 3.0f / 4.0f;
+    }
+    return p;
+}
 
 int main(int argc, char* argv[])
 {
@@ -245,7 +318,7 @@ int main(int argc, char* argv[])
     // Criamos uma janela do sistema operacional, com 800 colunas e 600 linhas
     // de pixels, e com título "INF01047 ...".
     GLFWwindow* window;
-    window = glfwCreateWindow(800, 600, "INF01047 - Seu Cartao - Seu Nome", NULL, NULL);
+    window = glfwCreateWindow(800, 600, "INF01047 - 00579490 - Renan Augusto da Silva Zen", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -366,7 +439,7 @@ int main(int argc, char* argv[])
         // Note que, no sistema de coordenadas da câmera, os planos near e far
         // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
         float nearplane = -0.1f;  // Posição do "near plane"
-        float farplane  = -10.0f; // Posição do "far plane"
+        float farplane  = -100.0f; // Posição do "far plane"
 
         if (g_UsePerspectiveProjection)
         {
@@ -406,32 +479,67 @@ int main(int argc, char* argv[])
         #define RED_VELVET_SURFACE   4
         #define JADE_SURFACE         6
 
-        // Desenhamos o modelo da esfera
-        model = Matrix_Translate(-2.0f,0.0f,0.0f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, SPHERE);
-        glUniform1i(g_surface_type_uniform, RED_VELVET_SURFACE);
-        DrawVirtualObject("the_sphere");
+        // Constantes da animação
+        float current_time = (float)glfwGetTime();
+        float speed = 0.1f;         // Velocidade de deslocamento na trajetória
+        float hop_speed = 4.0f;    // Velocidade do salto
+        float hop_height = 1.5f;    // Altura máxima do salto
 
-        // Desenhamos três coelhos com as cores verde, dourada e azul.
-        const int bunny_surfaces[3] = {
-            JADE_SURFACE,
-            GOLD_SURFACE,
-            BLUE_PLASTIC_SURFACE
-        };
-        for (int i = 0; i < 3; ++i)
-        {
-            model = Matrix_Translate(2.0f * i,0.0f,0.0f);
-            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        // Função lambda local para desenhar um coelho e sua esfera
+        auto DrawHoppingBunny = [&](Pose pose, int surface_type, float phase_offset) {
+            float y_offset = GetHopHeight(current_time + phase_offset, hop_speed, hop_height);
+            
+            // 1. Matriz do Coelho
+            glm::mat4 model_bunny = Matrix_Translate(pose.position.x, y_offset, pose.position.z) 
+                                  * Matrix_Rotate_Y(pose.yaw);
+            
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model_bunny));
             glUniform1i(g_object_id_uniform, BUNNY);
-            glUniform1i(g_surface_type_uniform, bunny_surfaces[i]);
+            glUniform1i(g_surface_type_uniform, surface_type);
             DrawVirtualObject("the_bunny");
+
+            // 2. Matriz da Esfera na cabeça (relativa ao coelho)
+            // Ajuste os valores de Translate(0, 0.8f, 0.2f) conforme as dimensões exatas do modelo
+            glm::mat4 model_sphere = model_bunny 
+                                   * Matrix_Translate(-0.55f, 0.62f, 0.0f)
+                                   * Matrix_Scale(0.45f, 0.45f, 0.45f);
+            
+            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model_sphere));
+            glUniform1i(g_object_id_uniform, SPHERE);
+            glUniform1i(g_surface_type_uniform, RED_VELVET_SURFACE);
+            DrawVirtualObject("the_sphere");
+        };
+
+        // --- Círculo (Azuis) ---
+        int num_blue = 8;
+        for (int i = 0; i < num_blue; i++) {
+            float u = (float)i / num_blue + (current_time * speed);
+            Pose pose = GetCirclePose(u, 3.0f);
+            DrawHoppingBunny(pose, BLUE_PLASTIC_SURFACE, i * 0.5f);
         }
 
-        // Desenhamos o plano do chão
-        model = Matrix_Translate(0.0f,-1.0f,0.0f) * Matrix_Scale(4.0f,1.0f,4.0f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        // --- Losango (Dourados) ---
+        int num_gold = 14;
+        for (int i = 0; i < num_gold; i++) {
+            float u = (float)i / num_gold + (current_time * speed * 0.8f);
+            Pose pose = GetDiamondPose(u, 6.0f);
+            DrawHoppingBunny(pose, GOLD_SURFACE, i * 0.3f);
+        }
+
+        // --- Retângulo (Verdes) ---
+        int num_green = 24;
+        for (int i = 0; i < num_green; i++) {
+            float u = (float)i / num_green + (current_time * speed * 0.5f);
+            Pose pose = GetRectanglePose(u, 19.0f, 14.0f);
+            DrawHoppingBunny(pose, JADE_SURFACE, i * 0.2f);
+        }
+
+        // --- Plano do chão ---
+        // Ampliado para comportar o retângulo exterior
+        glm::mat4 model_plane = Matrix_Translate(0.0f, -1.0f, 0.0f) * Matrix_Scale(20.0f, 1.0f, 20.0f);
+        glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model_plane));
         glUniform1i(g_object_id_uniform, PLANE);
+        glUniform1i(g_surface_type_uniform, JADE_SURFACE);
         DrawVirtualObject("the_plane");
 
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do

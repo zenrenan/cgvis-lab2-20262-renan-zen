@@ -6,8 +6,8 @@
 
 ## Dados do aluno
 
-- **Cartão UFRGS**: <mark>`<preencher>`</mark>
-- **Nome**: <mark>`<preencher>`</mark>
+- **Cartão UFRGS**: <mark>`00579490`</mark>
+- **Nome**: <mark>`Renan Augusto da Silva Zen`</mark>
 
 ## Passos que eu segui para resolver o problema especificado (em formato de *"prompt"*)
 
@@ -30,19 +30,19 @@
 > - Novamente, lembre-se que você *não pode utilizar ferramentas
 >   de IA para escrever este relatório*
 
-<mark>`<preencher>`</mark>
+<mark>`Esse seria o prompt que eu utilizei mandando a main.cpp original e uma foto do resultado esperado: "A partir desse código base (main.cpp) em que existem uma esfera e 3 coelhos, um dourado, um azul e um verde, mude o programa para que tenha uma câmera com uma vista de 60 graus olhando para o centro de uma figura. Essa figura é composta por um retângulo no formato 8:4:8:4 composto por 24 coelhos verdes, dentro desse retângulo faça um losango no formato 4:2:4:2 composto por 14 coelhos dourados e, por último, dentro do losango faça os coelhos azuis em um círculo composto por 8 coelhos. Faça a escala do chão para que caiba todos os coelhos com folga e no centro. Faça todos os coelhos andarem em fila indiana em sentido horário, de lado para o centro da figura e que eles fiquem pulando em direção para frente deles. Atente-se para alterar o 'farplane' de forma que a camêra enxergue a figura. Por último, faça com que os coelhos tenham a esfera do código original na cabeça, logo a frente de suas orelhas." A partir do resultado, eu alterei as distâncias entre os coelhos e a velocidade deles para que ficasse o mais próximo do resultado esperado.`</mark>
 
 ## Principais dificuldades encontradas durante o desenvolvimento (formato livre)
 
-<mark>`<preencher>`</mark>
+<mark>`Demorei para perceber que, para a distância da câmera, a variável 'farplane' estava pequena e os coelhos não estavam aparecendo na tela por conta disso. Depois que aumentei essa distância, percebi que meu código já estava funcionando.`</mark>
 
 ## Você acha que conseguiu resolver o problema de forma adequada?
 
-<mark>`<preencher>`</mark>
+<mark>`Acredito que grande parte do resultado esperado sim, consegui que os coelhos estivessem se movendo do jeito certo, mas não consegui implementar de forma idêntica a esse pulo que os coelhos estão fazendo pela falta de rotação dos coelhos a cada pulo.`</mark>
 
 ## Se você quiser compartilhar mais alguma coisa, coloque aqui:
 
-<mark>`<preencher>`</mark>
+<mark>`Meu prompt foi bem parecido com esse indicado acima, porém eu não havia percebido o 'farplane' original e fiquei, em vão, mudando outras coisas do código, para só depois de um tempo perceber que meu código já estava funcionando. Então adicionei essa colocação no prompt para evitar esse problema.`</mark>
 
 ## Se você possui alguma sugestão para o professor sobre esta atividade, coloque aqui:
 
